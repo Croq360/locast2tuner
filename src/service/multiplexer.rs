@@ -6,22 +6,33 @@ use crate::{
 use async_trait::async_trait;
 use futures::lock::Mutex;
 use log::info;
-use std::{collections::HashMap, sync::Arc};
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fs::File, sync::Arc};
 /// Multiplex `LocastService` objects. `Multiplexer` implements the `StationProvider` trait
 /// and can act as a LocastService.
 pub struct Multiplexer {
     services: Vec<LocastServiceArc>,
     config: Arc<Config>,
     station_id_service_map: Mutex<HashMap<String, LocastServiceArc>>,
+    channel_remap: Option<HashMap<String, ChannelRedef>>,
 }
 
 impl Multiplexer {
     /// Create a new `Multiplexer` with a vector of `LocastServiceArcs` and a `Config`
     pub fn new(services: Vec<LocastServiceArc>, config: Arc<Config>) -> MultiplexerArc {
+        let channel_remap = match &config.remap_file {
+            Some(f) => {
+                let file = File::open(f).unwrap();
+                let c: HashMap<String, ChannelRedef> = serde_json::from_reader(file).unwrap();
+                Some(c)
+            }
+            None => None,
+        };
         Arc::new(Multiplexer {
             services,
             config,
             station_id_service_map: Mutex::new(HashMap::new()),
+            channel_remap,
         })
     }
 }
@@ -72,6 +83,25 @@ impl StationProvider for Arc<Multiplexer> {
                         .callSign
                         .replace(channel, &station.channel_remapped.as_ref().unwrap());
                     station.callSign_remapped = Some(new_call_sign);
+                } else if self.channel_remap.is_some() {
+                    // Look if the channel is is remapped in the channel map
+                    let channel_remap = self.channel_remap.as_ref().unwrap();
+                    let key = format!("channel.{}", station.id);
+                    match channel_remap.get(&key) {
+                        Some(r) if r.active => {
+                            station.channel_remapped = Some(r.remap_channel.clone());
+                            station.callSign_remapped =
+                                Some(format!("{} {}", r.remap_channel, r.remap_call_sign));
+                            debug!(
+                                "Remap -  {} {} => {} {}",
+                                station.channel.clone().unwrap(),
+                                station.callSign,
+                                station.channel_remapped.clone().unwrap(),
+                                station.callSign_remapped.clone().unwrap()
+                            );
+                        }
+                        _ => {}
+                    }
                 }
                 self.station_id_service_map
                     .lock()
@@ -110,4 +140,13 @@ impl StationProvider for Arc<Multiplexer> {
     fn services(&self) -> Vec<LocastServiceArc> {
         self.services.clone()
     }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+struct ChannelRedef {
+    original_call_sign: String,
+    remap_call_sign: String,
+    original_channel: String,
+    remap_channel: String,
+    active: bool,
 }
