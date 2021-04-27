@@ -1255,7 +1255,7 @@ checksum = "b7282d924be3275cec7f6756ff4121987bc6481325397dde6ba3e7802b1a8b1c"
 
 [[package]]
 name = "locast2tuner"
-version = "0.1.28"
+version = "0.1.31"
 dependencies = [
  "actix-rt",
  "actix-web",
@@ -1274,6 +1274,7 @@ dependencies = [
  "hls_m3u8",
  "htmlescape",
  "itertools",
+ "lazy_static",
  "log 0.4.14",
  "prettytable-rs",
  "regex",
@@ -2494,7 +2495,6 @@ dependencies = [
  "libc",
  "memchr",
  "mio",
- "num_cpus",
  "once_cell",
  "parking_lot",
  "pin-project-lite",

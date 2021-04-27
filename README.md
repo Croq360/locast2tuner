@@ -1,5 +1,6 @@
 # locast2tuner
-![build status](https://github.com/wouterdebie/locast2tuner/actions/workflows/release.yml/badge.svg)
+
+[![Join the chat at https://gitter.im/wouterdebie/locast2tuner](https://badges.gitter.im/wouterdebie/locast2tuner.svg)](https://gitter.im/wouterdebie/locast2tuner?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) ![build status](https://github.com/wouterdebie/locast2tuner/actions/workflows/release.yml/badge.svg)
 
 
 This application provides an interface between locast.org and [Plex Media Server (PMS)](https://plex.tv) or [Emby](https://emby.media) by acting like an [HDHomerun](https://www.silicondust.com/) or an m3u tuner and an XMLTV provider.
@@ -160,7 +161,7 @@ By default `locast2tuner` uses your IP address to determine your location, but i
 - `override_zipcodes`, which takes a comma separated list of ZIP codes as an argument. E.g. `--override_zipcodes 90210,55111` for Los Angeles and Minneapolis.
 
 ## Multi regions
-`locast2tuner` allows starting multiple instances. This is done using the `override_zipcodes` option. A [file with all available locast regions](https://github.com/wouterdebie/locast2tuner/blob/main/regions) is included in the `locast2tuner` distribution.
+`locast2tuner` allows starting multiple instances. This is done using the `override_zipcodes` option. A [file with all available locast regions](https://github.com/wouterdebie/locast2tuner/blob/main/assets/regions) is included in the `locast2tuner` distribution.
 
 When using multiple regions, `locast2tuner` will start multiple instances on TCP ports starting at the value that is specified with the `port` (or the default `6077`) argument and incremented by one and it will generate UUIDs for each tuner.
 
@@ -186,7 +187,11 @@ For example: if you use `--multiplex --override_zipcodes=90210,55111`, all chann
 Note: This type of multiplexing makes sense in Emby, since you can add a single tuner at `http://PORT:IP` or `http://PORT:IP/lineup.m3u` and a single EPG at `http://PORT:IP/epg.xml`
 
 ## Remapping
-In case you override multiple zip codes, Emby and Plex will sort channels by channel number, which means channels from different locations might be intermingled. In order circumvent this, you can use `--remap`. This causes locast2tuner to rewrite the channel number based on the amount of instances there are. Locast will remap a "channel_number" to "channel_number + 100 * instance_number", where the instance_number starts at 0. E.g. you override 3 zip codes, then the channels from the first location will be untouched (since 100*0 == 0 the stations for the second location will start at 100 (e.g. 2.1 CBS becomes 102.1 CBS) and the stations for the third location will start at 200 (e.g. 13.2 WWFF becomes 213.2 WWFF).
+In case you override multiple zip codes, Emby and Plex will sort channels by channel number, which means channels from different locations might be intermingled. In order circumvent this, you can remap channels.  `locast2tuner` offers two ways of remapping channels.  Note that these two options are mutually exclusive, but both can appear in a config file. If both appear, then the `--remap` option takes precedence.
+
+The easiest way is to use `--remap` option. This causes locast2tuner to rewrite the channel number based on the amount of instances there are. Locast will remap a "channel_number" to "channel_number + 100 * instance_number", where the instance_number starts at 0. E.g. you override 3 zip codes, then the channels from the first location will be untouched (since 100*0 == 0 the stations for the second location will start at 100 (e.g. 2.1 CBS becomes 102.1 CBS) and the stations for the third location will start at 200 (e.g. 13.2 WWFF becomes 213.2 WWFF).
+
+Another way to do remapping is to use the `--remap_file=filename` option. You specify a JSON file containing your remappings. To get your current mappings, you can go to `http://PORT:IP/map.json`. Copy that content to a JSON file (you'll want to pretty it up too to make it easier to work with) and you can edit that JSON file, save it, and then use this option to load those remappings the next time you run `locast2tuner`. You will need to restart `locast2tuner` in order to see any changes you made (and you may need to recreate your tuner/EPG setup to have Plex or Emby reflect the right channels). ***NOTE*** This is currently a manual edit process, so if you want to go this route, please be sure that the JSON content is valid JSON before trying to use it. A web-based remap editor is in the works.
 
 ## Logging
 `locast2tuner` has a few options for logging: directly to the terminal (default), logging to a file and logging through syslog. You can combine the way you want to log by specifying multiple options:
